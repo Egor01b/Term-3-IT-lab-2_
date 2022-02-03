@@ -17,9 +17,9 @@ namespace Kse.Algorithms.Samples
                     if (indexOf != -1)
                     {
                         if(indexOf == 0)
-                            Console.Write("A");
-                        else if(indexOf == path.Count -1)
                             Console.Write("B");
+                        else if(indexOf == path.Count -1)
+                            Console.Write("A");
                         else Console.Write(".");
                     }
                     else Console.Write(maze[column, row]);

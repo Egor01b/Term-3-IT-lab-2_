@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace Kse.Algorithms.Samples;
 
 using System.Collections.Generic;
@@ -7,6 +5,93 @@ using System.Collections.Generic;
 public class PathFinder
 {
     public List<Point> GetShortestPath(string[,] map, Point start, Point goal)
+    {
+        return GetShortestPathAStar(map, start, goal);
+        //return GetShortestPathDjikstra(map, start, goal);
+    }
+    
+    private float GetPointWeight(string value)
+    {
+        if (value == " ") return 1;
+        else return 1 / (60 - (float.Parse(value) - 1) * 6);
+    }
+
+    private List<Point> GetShortestPathAStar(string[,] map, Point start, Point goal)
+    {
+        var heuristic = new Dictionary<Point, float>();
+        var distances = new Dictionary<Point, float>();
+        var cost = new Dictionary<Point, float>();
+        var parent = new Dictionary<Point, Point>();
+        var open = new List<Point>();
+        var closed = new List<Point>();
+
+        heuristic[start] = 0;
+        distances[start] = 0;
+        cost[start] = 0;
+
+        open.Add(start);
+
+        while(open.Count != 0)
+        {
+            var unvisitedMin = open[0];
+            var unvisitedMinValue = cost[open[0]];
+            for (int i = 1; i < open.Count; i++)
+            {
+                if (cost[open[i]] < unvisitedMinValue)
+                {
+                    unvisitedMin = open[i];
+                    unvisitedMinValue = cost[open[i]];
+                }
+            }
+            
+            if (unvisitedMin.Column == goal.Column && unvisitedMin.Row == goal.Row)
+            {
+                Console.WriteLine("Travel time: " + distances[goal] + "h");
+                return NavigateArray(start, goal, parent);
+            }
+
+            open.Remove(unvisitedMin);
+            closed.Add(unvisitedMin);
+
+            var offsets = new Point[]
+            {
+                new Point(0, 1),
+                new Point(1, 0),
+                new Point(-1, 0),
+                new Point(0, -1)
+            };
+            foreach(var offset in offsets)
+            {
+                var neighbor = new Point(unvisitedMin.Column + offset.Column, unvisitedMin.Row + offset.Row);
+
+                if (neighbor.Column == -1 || neighbor.Row == -1) continue;
+                if (neighbor.Column == map.GetLength(0) || neighbor.Row == map.GetLength(1)) continue;
+
+                if (map[neighbor.Column, neighbor.Row] == "█") continue;
+                if (closed.Contains(neighbor)) continue;
+
+                if (!open.Contains(neighbor))
+                {
+                    open.Add(neighbor);
+                    heuristic[neighbor] = (Math.Abs(neighbor.Column - unvisitedMin.Column) + Math.Abs(neighbor.Row - unvisitedMin.Column));
+                    
+                    parent[neighbor] = unvisitedMin;
+                    distances[neighbor] = distances[unvisitedMin] + GetPointWeight(map[unvisitedMin.Column, unvisitedMin.Row]);
+                    cost[neighbor] = heuristic[neighbor] + distances[neighbor];
+                }
+                else if (distances[unvisitedMin] < distances[neighbor])
+                {
+                    parent[neighbor] = unvisitedMin;
+                    distances[neighbor] = distances[unvisitedMin] + GetPointWeight(map[unvisitedMin.Column, unvisitedMin.Row]);
+                    cost[neighbor] = heuristic[neighbor] + distances[neighbor];
+                }
+            }
+        }
+        return new List<Point>();
+    }
+    
+    /*
+    private List<Point> GetShortestPathDjikstra(string[,] map, Point start, Point goal)
     {
         var previous = new Point[map.GetLength(0), map.GetLength(1)];
         var distances = new int[map.GetLength(0), map.GetLength(1)];
@@ -74,7 +159,6 @@ public class PathFinder
                 }
             }
             unvisited.Remove(unvisitedMin);
-            var tempDistance = 0;
             foreach (var offset in offsets)
             {
                 var neighbor = new Point(unvisitedMin.Column + offset.Column, unvisitedMin.Row + offset.Row);
@@ -84,8 +168,7 @@ public class PathFinder
                     neighbor.Row == distances.GetLength(1))
                     continue;
                 if (distances[neighbor.Column, neighbor.Row] == -1) continue;
-                if (unvisited.IndexOf(neighbor) == -1) continue;
-                tempDistance = unvisitedMinValue + 1;
+                var tempDistance = unvisitedMinValue + 1;
                 if (tempDistance < distances[neighbor.Column, neighbor.Row])
                 {
                     distances[neighbor.Column, neighbor.Row] = tempDistance;
@@ -111,15 +194,16 @@ public class PathFinder
         previous[start.Column, start.Row] = start;
         return path;
     }
+    */
 
-    private List<Point> NavigateArray(Point start, Point goal, Point[,] previous)
+    private List<Point> NavigateArray(Point start, Point goal, Dictionary<Point, Point> previous)
     {
         var shortestPath = new List<Point>();
         var current = goal;
         while (current.Row != start.Row || current.Column != start.Column)
         {
             shortestPath.Add(current);
-            current = previous[current.Column, current.Row];
+            current = previous[current];
             if (current.Column == -1)
                 return null;
         }
